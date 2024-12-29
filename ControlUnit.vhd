@@ -144,7 +144,7 @@ BEGIN
                 w_Operation <= op_ADD;
                 w_Select_Rd <= STD_LOGIC_VECTOR(TO_UNSIGNED(c_REGISTER_PC_INDEX, w_Select_Rd'LENGTH));
                 w_Select_Rm <= STD_LOGIC_VECTOR(TO_UNSIGNED(c_REGISTER_PC_INDEX, w_Select_Rm'LENGTH));
-                w_Immediate <= x"0002";
+                w_Immediate <= x"0001";
                 w_Register_Write_Enable <= '1';
                 w_Memory_Output_Enable <= '1';
                 w_Address_Select <= '1';
@@ -154,6 +154,8 @@ BEGIN
                 w_Select_Rm <= STD_LOGIC_VECTOR(TO_UNSIGNED(c_REGISTER_PC_INDEX, w_Select_Rm'LENGTH));
                 w_Load_IR <= '1';
                 w_Address_Select <= '1';
+                w_Input_Select <= '1';
+                w_Memory_Output_Enable <= '1';
             
             WHEN s_EXECUTE_INSTRUCTION =>      
                 -- Register Write Enable
@@ -197,7 +199,7 @@ BEGIN
                 END IF;
                       
                 -- Main Memory Address Select   
-                IF(w_Operation = op_PUSH) THEN   
+                IF(w_Operation = op_POP) THEN   
                     w_Address_Select <= '1';
                 END IF;
 

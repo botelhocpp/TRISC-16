@@ -26,13 +26,15 @@ ARCHITECTURE Structural OF Microcontroller IS
     SIGNAL w_Memory_Output_Enable   : STD_LOGIC := '0';
     SIGNAL w_IO_Output_Enable       : STD_LOGIC := '0';
 BEGIN
-    e_CLOCK_WIZARD : ENTITY WORK.ClockWizard
-    PORT MAP (
-        i_Clk       => i_Clk,
-        reset       => i_Rst,
-        o_Clk       => w_Clk,
-        o_Locked    => OPEN
-    );
+    w_Clk <= i_Clk;
+    
+    -- e_CLOCK_WIZARD : ENTITY WORK.ClockWizard
+    -- PORT MAP (
+    --     i_Clk       => i_Clk,
+    --     reset       => '0',
+    --     o_Clk       => w_Clk,
+    --     o_Locked    => OPEN
+    -- );
     e_PROCESSOR: ENTITY WORK.processor
     PORT MAP ( 
         i_Clk           => w_Clk,
