@@ -30,7 +30,6 @@ BEGIN
 
     WITH i_Sel SELECT
         w_Result <= (w_Op_A - w_Op_B)                           WHEN op_SUB | op_CMP | op_PUSH,
-                    -- (w_Op_A * w_Op_B)                           WHEN op_MUL,
                     (SHIFT_LEFT(w_Op_A, TO_INTEGER(w_Op_B)))    WHEN op_SHL,
                     (SHIFT_RIGHT(w_Op_A, TO_INTEGER(w_Op_B)))   WHEN op_SHR,
                     (w_Op_A AND w_Op_B)                         WHEN op_AND,
@@ -38,7 +37,8 @@ BEGIN
                     (w_Op_A XOR w_Op_B)                         WHEN op_XOR,
                     (NOT w_Op_A)                                WHEN op_NOT,
                     (0 - w_Op_A)                                WHEN op_NEG,
-                    (w_Op_B)                                    WHEN op_MOV | op_JMP,
+                    (w_Op_B)                                    WHEN op_MOV,
+                    (SHIFT_LEFT(w_Op_B, 8) OR w_Op_A)           WHEN op_MOVU,
                     (w_Op_A + w_Op_B)                           WHEN OTHERS;
 
     o_Result <= t_Reg16(w_Result(c_WORD_SIZE - 1 DOWNTO 0));
@@ -49,7 +49,7 @@ BEGIN
     PROCESS(w_Op_A, w_Op_B, w_Result, i_Sel)
     BEGIN
         IF(i_Sel = op_SUB OR i_Sel = op_CMP) THEN
-            IF(w_Op_A >= w_Op_B) THEN
+            IF(w_Op_A < w_Op_B) THEN
                 o_Flag_Carry <= '1';
             ELSE
                 o_Flag_Carry <= '0';

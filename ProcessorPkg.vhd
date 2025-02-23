@@ -6,23 +6,54 @@ LIBRARY STD;
 USE STD.TEXTIO.ALL;
 
 PACKAGE ProcessorPkg IS
-    CONSTANT c_MEMORY_SIZE : INTEGER := 8192;
+    -- Common Constants
     CONSTANT c_WORD_SIZE : INTEGER := 16;
+    CONSTANT c_CPU_FREQ : INTEGER := 25000000;
     
-    CONSTANT c_ZERO_FLAG_INDEX : INTEGER := 0;
-    CONSTANT c_CARRY_FLAG_INDEX : INTEGER := 1;
-    
-    CONSTANT c_REGISTER_SP_INDEX : INTEGER := 6;
-    CONSTANT c_REGISTER_PC_INDEX : INTEGER := 7;
-
+    -- Common Types
     SUBTYPE t_Nibble IS STD_LOGIC_VECTOR(3 DOWNTO 0);
     SUBTYPE t_Byte IS STD_LOGIC_VECTOR(7 DOWNTO 0);
     SUBTYPE t_Reg16 IS STD_LOGIC_VECTOR(c_WORD_SIZE - 1 DOWNTO 0);
     SUBTYPE t_UReg16 IS UNSIGNED(c_WORD_SIZE - 1 DOWNTO 0);
     SUBTYPE t_SReg16 IS SIGNED(c_WORD_SIZE - 1 DOWNTO 0);
+
+    -- RAM Memory Sizes and Addresses (in words)
+    CONSTANT c_RAM_SIZE : INTEGER := 2**8; -- 2**14
+    CONSTANT c_RAM_BASE_ADDR : t_UReg16 := x"0000";
+    CONSTANT c_RAM_LIMIT_ADDR : t_UReg16 := c_RAM_BASE_ADDR + 2 * c_RAM_SIZE;
+
+    -- ROM Memory Sizes and Addresses (in words)
+    CONSTANT c_ROM_SIZE : INTEGER := 2**7; 
+    CONSTANT c_ROM_BASE_ADDR : t_UReg16 := x"E000";
+    CONSTANT c_ROM_LIMIT_ADDR : t_UReg16 := c_ROM_BASE_ADDR + 2 * c_ROM_SIZE;
+
+    -- IO Memory Sizes and Addresses (in words)
+    CONSTANT c_IO_BASE_ADDR : t_UReg16 := x"F000";
+
+    -- Peripherals Addresses (Led & Switch)
+    CONSTANT c_LED_SWITCH_SIZE : INTEGER := 2;
+    CONSTANT c_LED_SWITCH_BASE_ADDR : t_UReg16 := c_IO_BASE_ADDR + x"0000";
+    CONSTANT c_LED_SWITCH_LIMIT_ADDR : t_UReg16 := c_LED_SWITCH_BASE_ADDR + 2 * c_LED_SWITCH_SIZE;
+
+    -- Peripherals Addresses (GPIO)
+    CONSTANT c_GPIO_SIZE : INTEGER := 3;
+    CONSTANT c_GPIO_BASE_ADDR : t_UReg16 := c_IO_BASE_ADDR + x"0100";
+    CONSTANT c_GPIO_LIMIT_ADDR : t_UReg16 := c_GPIO_BASE_ADDR + 2 * c_GPIO_SIZE;
+
+    -- Peripherals Addresses (Timer)
+    CONSTANT c_TIMER_SIZE : INTEGER := 4;
+    CONSTANT c_TIMER_BASE_ADDR : t_UReg16 := c_IO_BASE_ADDR + x"0200";
+    CONSTANT c_TIMER_LIMIT_ADDR : t_UReg16 := c_TIMER_BASE_ADDR + 2 * c_TIMER_SIZE;
     
-    CONSTANT c_REGISTER_SP_INIT_VALUE : t_Reg16 := t_Reg16(TO_UNSIGNED(c_MEMORY_SIZE - 2, c_WORD_SIZE));
-    CONSTANT c_REGISTER_PC_INIT_VALUE : t_Reg16 := x"0020";
+    -- Registers Default Values
+    CONSTANT c_REGISTER_SP_INDEX : INTEGER := 6;
+    CONSTANT c_REGISTER_PC_INDEX : INTEGER := 7;
+    CONSTANT c_REGISTER_SP_INIT_VALUE : t_Reg16 := t_Reg16(c_RAM_LIMIT_ADDR);
+    CONSTANT c_REGISTER_PC_INIT_VALUE : t_Reg16 := t_Reg16(c_ROM_BASE_ADDR);
+    
+    -- ALU Flag Indexes
+    CONSTANT c_ZERO_FLAG_INDEX : INTEGER := 0;
+    CONSTANT c_CARRY_FLAG_INDEX : INTEGER := 1;
     
     TYPE t_OperationType IS (
         type_JUMP,
@@ -41,14 +72,14 @@ PACKAGE ProcessorPkg IS
         op_JMP,
         op_BEQ,
         op_BNE,
-        op_BLE,
-        op_BGT,
+        op_BLT,
+        op_BGE,
         op_LDR,
         op_STR,
         op_MOV,
+        op_MOVU,
         op_ADD,
         op_SUB,
-        op_MUL,
         op_AND,
         op_OR,
         op_XOR,
@@ -84,9 +115,9 @@ PACKAGE BODY ProcessorPkg IS
                     WHEN "01" =>
                         v_Operation := op_BNE;
                     WHEN "10" =>
-                        v_Operation := op_BLE;
+                        v_Operation := op_BLT;
                     WHEN "11" =>
-                        v_Operation := op_BGT;
+                        v_Operation := op_BGE;
                     WHEN OTHERS =>
                         v_Operation := op_INVALID;
                 END CASE;
@@ -97,11 +128,11 @@ PACKAGE BODY ProcessorPkg IS
             WHEN "0100" =>
                 v_Operation := op_MOV;
             WHEN "0101" =>
-                v_Operation := op_ADD;
+                v_Operation := op_MOVU;
             WHEN "0110" =>
-                v_Operation := op_SUB;
+                v_Operation := op_ADD;
             WHEN "0111" =>
-                v_Operation := op_MUL;
+                v_Operation := op_SUB;
             WHEN "1000" =>
                 v_Operation := op_AND;
             WHEN "1001" =>
@@ -146,13 +177,13 @@ PACKAGE BODY ProcessorPkg IS
         CASE i_Operation IS
             WHEN op_JMP =>
                 v_Operation_Type := type_JUMP;
-            WHEN op_BEQ | op_BNE | op_BLE | op_BGT =>
+            WHEN op_BEQ | op_BNE | op_BLT | op_BGE =>
                 v_Operation_Type := type_BRANCH;
             WHEN op_LDR =>
                 v_Operation_Type := type_LOAD;
             WHEN op_STR =>
                 v_Operation_Type := type_STORE;
-            WHEN op_MOV =>
+            WHEN op_MOV | op_MOVU =>
                 v_Operation_Type := type_MOVE;
             WHEN op_CMP =>
                 v_Operation_Type := type_COMPARE;

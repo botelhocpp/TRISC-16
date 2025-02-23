@@ -94,7 +94,7 @@ BEGIN
                 WHEN s_EXECUTE_INSTRUCTION =>
                     IF(w_Operation = op_LDR OR w_Operation = op_POP) THEN
                         r_Current_State <= s_WRITE_BACK;
-                    ELSE
+                    ELSIF(w_Operation /= op_HALT) THEN
                         r_Current_State <= s_FETCH_INSTRUCTION;
                     END IF;
                 
@@ -127,10 +127,10 @@ BEGIN
 
         -- Set immediate
         CASE v_Operation_Type IS
-            WHEN type_JUMP      => w_Immediate <= t_Reg16(RESIZE(UNSIGNED(w_Instruction(10 DOWNTO 0)), w_Immediate'LENGTH));
-            WHEN type_BRANCH    => w_Immediate <= t_Reg16(RESIZE(SIGNED(w_Instruction(10 DOWNTO 2)), w_Immediate'LENGTH));
-            WHEN type_LOAD      => w_Immediate <= t_Reg16(RESIZE(SIGNED(w_Instruction(4 DOWNTO 0)), w_Immediate'LENGTH));
-            WHEN type_STORE     => w_Immediate <= t_Reg16(RESIZE(SIGNED(w_Instruction(10 DOWNTO 8) & w_Instruction(1 DOWNTO 0)), w_Immediate'LENGTH));
+            WHEN type_JUMP      => w_Immediate <= t_Reg16(RESIZE(SIGNED(w_Instruction(10 DOWNTO 0)) & '0', w_Immediate'LENGTH));
+            WHEN type_BRANCH    => w_Immediate <= t_Reg16(RESIZE(SIGNED(w_Instruction(10 DOWNTO 2)) & '0', w_Immediate'LENGTH));
+            WHEN type_LOAD      => w_Immediate <= t_Reg16(RESIZE(SIGNED(w_Instruction(4 DOWNTO 0)) & '0', w_Immediate'LENGTH));
+            WHEN type_STORE     => w_Immediate <= t_Reg16(RESIZE(SIGNED(w_Instruction(10 DOWNTO 8) & w_Instruction(1 DOWNTO 0)) & '0', w_Immediate'LENGTH));
             WHEN type_MOVE      => w_Immediate <= t_Reg16(RESIZE(UNSIGNED(w_Instruction(7 DOWNTO 0)), w_Immediate'LENGTH));
             WHEN type_ALU       => w_Immediate <= t_Reg16(RESIZE(UNSIGNED(w_Instruction(4 DOWNTO 0)), w_Immediate'LENGTH));
             WHEN type_COMPARE   => w_Immediate <= t_Reg16(RESIZE(SIGNED(w_Instruction(10 DOWNTO 8) & w_Instruction(4 DOWNTO 0)), w_Immediate'LENGTH));
@@ -144,7 +144,7 @@ BEGIN
                 w_Operation <= op_ADD;
                 w_Select_Rd <= STD_LOGIC_VECTOR(TO_UNSIGNED(c_REGISTER_PC_INDEX, w_Select_Rd'LENGTH));
                 w_Select_Rm <= STD_LOGIC_VECTOR(TO_UNSIGNED(c_REGISTER_PC_INDEX, w_Select_Rm'LENGTH));
-                w_Immediate <= x"0001";
+                w_Immediate <= x"0002";
                 w_Register_Write_Enable <= '1';
                 w_Memory_Output_Enable <= '1';
                 w_Address_Select <= '1';
@@ -163,8 +163,8 @@ BEGIN
                     IF(
                         (w_Operation = op_BEQ AND a_ZERO_FLAG = '1') OR
                         (w_Operation = op_BNE AND a_ZERO_FLAG = '0') OR
-                        (w_Operation = op_BLE AND a_CARRY_FLAG = '1' AND a_ZERO_FLAG = '1') OR
-                        (w_Operation = op_BGT AND a_CARRY_FLAG = '0' AND a_ZERO_FLAG = '0')
+                        (w_Operation = op_BLT AND (a_CARRY_FLAG = '1' AND a_ZERO_FLAG = '0')) OR
+                        (w_Operation = op_BGE AND (a_CARRY_FLAG = '0' OR a_ZERO_FLAG = '1'))
                     ) THEN
                         w_Register_Write_Enable <= '1';
                     END IF;
@@ -187,8 +187,10 @@ BEGIN
                 END CASE;
                 
                 -- Source Register Select
-                IF(v_Operation_Type = type_BRANCH) THEN
+                IF(v_Operation_Type = type_JUMP OR v_Operation_Type = type_BRANCH) THEN
                     w_Select_Rm <= STD_LOGIC_VECTOR(TO_UNSIGNED(c_REGISTER_PC_INDEX, w_Select_Rm'LENGTH));
+                ELSIF(w_Operation = op_MOVU) THEN
+                    w_Select_Rm <= w_Instruction(10 DOWNTO 8);
                 END IF;
 
                 -- Destiny Register Select
