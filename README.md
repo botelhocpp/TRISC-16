@@ -1,8 +1,8 @@
-# TRISC-16 Processor
+# TRISC-16 Microcontroller
 
-## A 16-bit RISC processor made for the monograph of the Computer Engineering course, using VHDL-2008.
+## A 16-bit microcontroller, containing a RISC processor, named TRISC (Training RISC), made as part of my final monograph for the Computer Engineering course: "Implementation of a FPGA Microcontroller for Teacing Computer Engineering: From Theory to Experimentation".
 
-A microcontroller encapsulation was made for the TRISC-16 CPU, with a 64 KB address space, unified instruction and data memories, as well as various peripherals and 16 general purpose I/O pins.
+The main part if the RISC core, the TRISC CPU, having a microcontroller encapsulation made for it's use, the TRISC-16 MCU, with up to 64 KB address space, unified instruction and data memories, as well as various peripherals and 16 general purpose I/O pins.
 
 ## Revisions
 
