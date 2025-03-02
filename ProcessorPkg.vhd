@@ -9,6 +9,7 @@ PACKAGE ProcessorPkg IS
     -- Common Constants
     CONSTANT c_WORD_SIZE : INTEGER := 16;
     CONSTANT c_CPU_FREQ : INTEGER := 25000000;
+    CONSTANT c_UART_BAUD_RATE : INTEGER := 115200;
     
     -- Common Types
     SUBTYPE t_Nibble IS STD_LOGIC_VECTOR(3 DOWNTO 0);
@@ -44,11 +45,21 @@ PACKAGE ProcessorPkg IS
     CONSTANT c_TIMER_SIZE : INTEGER := 4;
     CONSTANT c_TIMER_BASE_ADDR : t_UReg16 := c_IO_BASE_ADDR + x"0200";
     CONSTANT c_TIMER_LIMIT_ADDR : t_UReg16 := c_TIMER_BASE_ADDR + 2 * c_TIMER_SIZE;
+
+    -- Peripherals Addresses (PWM)
+    CONSTANT c_PWM_SIZE : INTEGER := 5;
+    CONSTANT c_PWM_BASE_ADDR : t_UReg16 := c_IO_BASE_ADDR + x"0300";
+    CONSTANT c_PWM_LIMIT_ADDR : t_UReg16 := c_PWM_BASE_ADDR + 2 * c_PWM_SIZE;
+    
+    -- Peripherals Addresses (UART)
+    CONSTANT c_UART_SIZE : INTEGER := 3;
+    CONSTANT c_UART_BASE_ADDR : t_UReg16 := c_IO_BASE_ADDR + x"0400";
+    CONSTANT c_UART_LIMIT_ADDR : t_UReg16 := c_UART_BASE_ADDR + 2 * c_UART_SIZE;
     
     -- Registers Default Values
     CONSTANT c_REGISTER_SP_INDEX : INTEGER := 6;
     CONSTANT c_REGISTER_PC_INDEX : INTEGER := 7;
-    CONSTANT c_REGISTER_SP_INIT_VALUE : t_Reg16 := t_Reg16(c_RAM_LIMIT_ADDR);
+    CONSTANT c_REGISTER_SP_INIT_VALUE : t_Reg16 := t_Reg16(c_RAM_LIMIT_ADDR - 2);
     CONSTANT c_REGISTER_PC_INIT_VALUE : t_Reg16 := t_Reg16(c_ROM_BASE_ADDR);
     
     -- ALU Flag Indexes

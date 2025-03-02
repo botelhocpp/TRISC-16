@@ -169,7 +169,7 @@ BEGIN
                         w_Register_Write_Enable <= '1';
                     END IF;
 
-                ELSIF(v_Operation_Type /= type_STORE AND v_Operation_Type /= type_COMPARE AND v_Operation_Type /= type_HALT) THEN
+                ELSIF(v_Operation_Type /= type_LOAD AND v_Operation_Type /= type_STORE AND v_Operation_Type /= type_COMPARE AND v_Operation_Type /= type_HALT) THEN
                     w_Register_Write_Enable <= '1';
                 END IF;
                       
@@ -209,6 +209,11 @@ BEGIN
                 w_Input_Select <= '1';
                 w_Register_Write_Enable <= '1';  
                 w_Memory_Output_Enable <= '1';
+                
+                -- Main Memory Address Select   
+                IF(w_Operation = op_POP) THEN   
+                    w_Address_Select <= '1';
+                END IF;
         END CASE;
     END PROCESS p_INSTRUCTION_CYCLE_GENERATE_SIGNALS;
 END ARCHITECTURE;

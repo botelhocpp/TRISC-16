@@ -18,30 +18,7 @@ END ENTITY;
 ARCHITECTURE RTL OF MainMemory IS 
     TYPE t_MemoryArray IS ARRAY (0 TO c_RAM_SIZE - 1) OF t_Reg16;
     
-    SIGNAL r_Contents : t_MemoryArray := (
-        x"4c00",
-        x"5cf2",
-        x"4d00",
-        x"5df0",
-        x"4acf",
-        x"5a07",
-        x"388a",
-        x"4a24",
-        x"5af4",
-        x"3888",
-        x"2aa0",
-        x"aa4f",
-        x"38a8",
-        x"4a01",
-        x"3889",
-        x"2a81",
-        x"8a42",
-        x"1ff4",
-        x"0ff7",
-        -- x"58f0",
-        -- x"2901",
-        -- x"3804",
-        -- x"0ffc",          
+    SIGNAL r_Contents : t_MemoryArray := (                    
         OTHERS => (OTHERS => '0')
     );
     SIGNAL r_Data_Out : t_Reg16 := (OTHERS => '0');

@@ -22,13 +22,13 @@ ARCHITECTURE RTL OF LedSwitch IS
     CONSTANT c_LED_SWITCH_DATAOUT_REG_INDEX : INTEGER := 0;
     CONSTANT c_LED_SWITCH_DATAIN_REG_INDEX : INTEGER := 1;
     
-    TYPE t_RegisterArray IS ARRAY (0 TO 1) OF t_Reg16; 
+    TYPE t_RegisterArray IS ARRAY (0 TO c_LED_SWITCH_SIZE - 1) OF t_Reg16; 
     SIGNAL r_Registers : t_RegisterArray := (OTHERS => (OTHERS => '0'));
 
     SIGNAL r_Leds : STD_LOGIC_VECTOR(3 DOWNTO 0) := (OTHERS => '0');
     SIGNAL r_Data_Out : t_Reg16 := (OTHERS => '0');
     
-    SIGNAL w_Address : INTEGER RANGE 0 TO 15 := 0;
+    SIGNAL w_Address : INTEGER RANGE 0 TO c_LED_SWITCH_SIZE - 1 := 0;
 BEGIN
     o_Leds <= r_Leds;
     

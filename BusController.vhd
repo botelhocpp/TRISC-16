@@ -19,6 +19,10 @@ PORT (
     o_Gpio_Output_Enable        : OUT STD_LOGIC;
     o_Timer_Write_Enable        : OUT STD_LOGIC;
     o_Timer_Output_Enable       : OUT STD_LOGIC;
+    o_Pwm_Write_Enable          : OUT STD_LOGIC;
+    o_Pwm_Output_Enable         : OUT STD_LOGIC;
+    o_Uart_Write_Enable         : OUT STD_LOGIC;
+    o_Uart_Output_Enable        : OUT STD_LOGIC;
     o_Address                   : OUT t_Reg16
 );
 END ENTITY;
@@ -42,6 +46,10 @@ BEGIN
         o_Gpio_Output_Enable <= '0';
         o_Timer_Write_Enable <= '0';
         o_Timer_Output_Enable <= '0';
+        o_Pwm_Write_Enable <= '0';
+        o_Pwm_Output_Enable <= '0';
+        o_Uart_Write_Enable <= '0';
+        o_Uart_Output_Enable <= '0';
 
         IF(v_Address >= c_RAM_BASE_ADDR AND v_Address < c_RAM_LIMIT_ADDR) THEN
             v_Address_Bus := v_Address - c_RAM_BASE_ADDR;
@@ -66,6 +74,16 @@ BEGIN
             v_Address_Bus := v_Address - c_TIMER_BASE_ADDR;
             o_Timer_Write_Enable <= i_Write_Enable;
             o_Timer_Output_Enable <= i_Output_Enable;
+            
+        ELSIF(v_Address >= c_PWM_BASE_ADDR AND v_Address < c_PWM_LIMIT_ADDR) THEN
+            v_Address_Bus := v_Address - c_PWM_BASE_ADDR;
+            o_Pwm_Write_Enable <= i_Write_Enable;
+            o_Pwm_Output_Enable <= i_Output_Enable;
+            
+        ELSIF(v_Address >= c_UART_BASE_ADDR AND v_Address < c_UART_LIMIT_ADDR) THEN
+            v_Address_Bus := v_Address - c_UART_BASE_ADDR;
+            o_Uart_Write_Enable <= i_Write_Enable;
+            o_Uart_Output_Enable <= i_Output_Enable;
         END IF;
 
         o_Address <= t_Reg16('0' & v_Address_Bus(15 DOWNTO 1));

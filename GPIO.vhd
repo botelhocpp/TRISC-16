@@ -22,14 +22,14 @@ ARCHITECTURE RTL OF GPIO IS
     CONSTANT c_GPIO_DATAOUT_REG_INDEX : INTEGER := 1;
     CONSTANT c_GPIO_DATAIN_REG_INDEX : INTEGER := 2;
     
-    TYPE t_RegisterArray IS ARRAY (0 TO 2) OF t_Reg16;
+    TYPE t_RegisterArray IS ARRAY (0 TO c_GPIO_SIZE - 1) OF t_Reg16;
     
     SIGNAL r_Registers : t_RegisterArray;
 
     SIGNAL r_Data_Out : t_Reg16 := (OTHERS => '0');
     SIGNAL r_Pin_Port_Out : t_Reg16 := (OTHERS => 'Z');
     
-    SIGNAL w_Address : INTEGER := 0;
+    SIGNAL w_Address : INTEGER RANGE 0 TO c_GPIO_SIZE - 1 := 0;
     
     ALIAS a_DATADIR_reg : t_Reg16 IS r_Registers(c_GPIO_DATADIR_REG_INDEX);
     ALIAS a_DATAOUT_reg : t_Reg16 IS r_Registers(c_GPIO_DATAOUT_REG_INDEX); 
@@ -52,6 +52,11 @@ BEGIN
             r_Data_Out <= (OTHERS => 'Z');
         
         ELSIF(RISING_EDGE(i_Clk)) THEN
+            IF(i_Write_Enable = '1') THEN
+                r_Registers(w_Address) <= io_Data;
+            ELSIF(i_Output_Enable = '1') THEN
+                r_Data_Out <= r_Registers(w_Address);
+            END IF;
                
             loop_INPUT_PIN_INTERFACE:
             FOR i IN 0 TO io_Pin_Port'LENGTH - 1 LOOP
@@ -61,13 +66,6 @@ BEGIN
                     a_DATAIN_reg(i) <= '0';
                 END IF;
             END LOOP loop_INPUT_PIN_INTERFACE;
-             
-            -- User Interface
-            IF(i_Write_Enable = '1' AND w_Address /= c_GPIO_DATAIN_REG_INDEX) THEN
-                r_Registers(w_Address) <= io_Data;
-            ELSIF(i_Output_Enable = '1') THEN
-                r_Data_Out <= r_Registers(w_Address);
-            END IF;
         END IF;
     END PROCESS;
         

@@ -18,9 +18,30 @@ ARCHITECTURE RTL OF BootloaderRom IS
     TYPE t_MemoryArray IS ARRAY (0 TO c_ROM_SIZE - 1) OF t_Reg16;
     
     SIGNAL r_Contents : t_MemoryArray := (
-        x"58f0",
-        x"2901",
-        x"3804",
+        x"4c00",
+        x"4dff",
+        x"5dff",
+        x"a248",
+        x"5af4",
+        x"2b42",
+        x"8b64",
+        x"1ff4",
+        x"2841",
+        x"4b00",
+        x"384e",
+        x"2b42",
+        x"8b64",
+        x"1ff4",
+        x"2941",
+        x"4b00",
+        x"384e",
+        x"c928",
+        x"9004",
+        x"d014",
+        x"180c",
+        x"3880",
+        x"6c82",
+        x"0fed",
         x"4f00",
         OTHERS => (OTHERS => '0')
     );
