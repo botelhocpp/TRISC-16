@@ -7,7 +7,7 @@ USE WORK.ProcessorPkg.ALL;
 
 ENTITY Receiver IS
 GENERIC (
-    g_CLKS_PER_BIT : INTEGER := c_CPU_FREQ / c_UART_BAUD_RATE  -- Needs to be set correctly
+    g_CLKS_PER_BIT : INTEGER := c_CPU_FREQ / c_UART_BAUD_RATE
 );
 PORT (
     i_Clk       : IN  STD_LOGIC;
@@ -29,8 +29,8 @@ ARCHITECTURE RTL OF Receiver IS
     );
     SIGNAL r_SM_Main : t_CurrentState := s_IDLE;
 
-    SIGNAL r_RX_Data_R : STD_LOGIC := '0';
-    SIGNAL r_RX_Data   : STD_LOGIC := '0';
+    SIGNAL r_RX_Data_R : STD_LOGIC := '1';
+    SIGNAL r_RX_Data   : STD_LOGIC := '1';
     
     SIGNAL r_Clk_Count : INTEGER RANGE 0 TO g_CLKS_PER_BIT - 1 := 0;
     SIGNAL r_Bit_Index : INTEGER RANGE 0 TO 7 := 0;  -- 8 Bits Total

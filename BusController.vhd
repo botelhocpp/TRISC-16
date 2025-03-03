@@ -23,12 +23,16 @@ PORT (
     o_Pwm_Output_Enable         : OUT STD_LOGIC;
     o_Uart_Write_Enable         : OUT STD_LOGIC;
     o_Uart_Output_Enable        : OUT STD_LOGIC;
-    o_Address                   : OUT t_Reg16
+    o_Address                   : OUT t_Reg16;
+    io_Data                     : INOUT t_Reg16
 );
 END ENTITY;
 
 ARCHITECTURE RTL OF BusController IS 
+    SIGNAL w_Enable_Place_Holder : STD_LOGIC := '0';
 BEGIN
+    io_Data <= (OTHERS => '0') WHEN (i_Output_Enable = '1' AND w_Enable_Place_Holder = '1') ELSE (OTHERS => 'Z');
+
     p_RESOLVE_MODULE_ACCESS:
     PROCESS(i_Address, i_Write_Enable, i_Output_Enable)
         VARIABLE v_Address : t_UReg16 := (OTHERS => '0');
@@ -37,6 +41,7 @@ BEGIN
         v_Address := t_UReg16(i_Address);
         v_Address_Bus := (OTHERS => '0');
 
+        w_Enable_Place_Holder <= '0';
         o_Ram_Write_Enable <= '0';
         o_Ram_Output_Enable <= '0';
         o_Rom_Output_Enable <= '0';
@@ -84,6 +89,10 @@ BEGIN
             v_Address_Bus := v_Address - c_UART_BASE_ADDR;
             o_Uart_Write_Enable <= i_Write_Enable;
             o_Uart_Output_Enable <= i_Output_Enable;
+        
+        ELSE
+            w_Enable_Place_Holder <= '1';
+
         END IF;
 
         o_Address <= t_Reg16('0' & v_Address_Bus(15 DOWNTO 1));
