@@ -9,6 +9,8 @@ ENTITY ControlUnit IS
 PORT (    
     i_Instruction           : IN t_Reg16;
     i_Flags                 : IN t_Reg16;
+    i_Irq                   : IN STD_LOGIC;
+    i_Soft_Rst                : IN STD_LOGIC;
     i_Clk                   : IN STD_LOGIC;
     i_Rst                   : IN STD_LOGIC;
     o_Select_Rm             : OUT STD_LOGIC_VECTOR(2 DOWNTO 0);
@@ -18,6 +20,8 @@ PORT (
     o_Memory_Write_Enable   : OUT STD_LOGIC;
     o_Memory_Output_Enable  : OUT STD_LOGIC;
     o_Load_Flags            : OUT STD_LOGIC;
+    o_Save_Flags            : OUT STD_LOGIC;
+    o_Retrieve_Flags        : OUT STD_LOGIC;
     o_Input_Select          : OUT STD_LOGIC;
     o_Address_Select        : OUT STD_LOGIC;
     o_Operand_Select        : OUT STD_LOGIC;   
@@ -27,13 +31,25 @@ PORT (
 END ENTITY;
 
 ARCHITECTURE RTL OF ControlUnit IS
+    CONSTANT c_CR_INTERRUPT_ENABLE_BIT : INTEGER := 0;
+
     TYPE t_InstructionCycle IS (
         s_FETCH_INSTRUCTION,
         s_STORE_INSTRUCTION,
         s_EXECUTE_INSTRUCTION,
-        s_WRITE_BACK
+        s_WRITE_BACK,
+        s_CHECK_INTERRUPT,
+        s_GOTO_HANDLER
     );
     SIGNAL r_Current_State : t_InstructionCycle := s_FETCH_INSTRUCTION;
+
+    -- Interrupt Processing
+    SIGNAL r_Soft_Rst : STD_LOGIC := '0';
+    SIGNAL r_Soft_Rst_Edge : STD_LOGIC := '0';
+    SIGNAL w_Soft_Rst_Edge_Ack : STD_LOGIC := '0';
+    SIGNAL r_Irq : STD_LOGIC := '0';
+    SIGNAL r_Irq_Edge : STD_LOGIC := '0';
+    SIGNAL w_Irq_Edge_Ack : STD_LOGIC := '0';
 
     -- Aliases
     ALIAS a_ZERO_FLAG IS i_Flags(c_ZERO_FLAG_INDEX);
@@ -48,12 +64,17 @@ ARCHITECTURE RTL OF ControlUnit IS
     SIGNAL w_Memory_Write_Enable : STD_LOGIC := '0';
     SIGNAL w_Memory_Output_Enable : STD_LOGIC := '0';
     SIGNAL w_Load_Flags : STD_LOGIC := '0';
+    SIGNAL w_Save_Flags : STD_LOGIC := '0';
+    SIGNAL w_Retrieve_Flags : STD_LOGIC := '0';
     SIGNAL w_Input_Select : STD_LOGIC := '0';
     SIGNAL w_Address_Select : STD_LOGIC := '0';
     SIGNAL w_Operand_Select : STD_LOGIC := '0';   
     SIGNAL w_Load_IR : STD_LOGIC := '0';   
     SIGNAL w_Immediate : t_Reg16 := (OTHERS => '0');
     SIGNAL w_Instruction : t_Reg16 := (OTHERS => '0');
+    SIGNAL w_Load_CR : STD_LOGIC := '0';  
+    SIGNAL w_CR_Input : t_Reg16 := (OTHERS => '0');
+    SIGNAL w_CR_Output : t_Reg16 := (OTHERS => '0');
 BEGIN
     e_IR_REGISTER: ENTITY WORK.GenericRegister
     PORT MAP (
@@ -62,6 +83,14 @@ BEGIN
         i_Clk => i_Clk,
         i_Rst => i_Rst,
         o_Q => w_Instruction
+    );
+    e_CR_REGISTER: ENTITY WORK.GenericRegister
+    PORT MAP (
+        i_D => w_CR_Input,
+        i_Load => w_Load_CR,
+        i_Clk => i_Clk,
+        i_Rst => i_Rst,
+        o_Q => w_CR_Output
     );
 
     -- Map Control Signals
@@ -72,6 +101,8 @@ BEGIN
     o_Memory_Write_Enable <= w_Memory_Write_Enable;
     o_Memory_Output_Enable <= w_Memory_Output_Enable;
     o_Load_Flags <= w_Load_Flags;
+    o_Save_Flags <= w_Save_Flags;
+    o_Retrieve_Flags <= w_Retrieve_Flags;
     o_Input_Select <= w_Input_Select;
     o_Address_Select <= w_Address_Select;
     o_Operand_Select <= w_Operand_Select;
@@ -92,21 +123,30 @@ BEGIN
                     r_Current_State <= s_EXECUTE_INSTRUCTION;
                     
                 WHEN s_EXECUTE_INSTRUCTION =>
-                    IF(w_Operation = op_LDR OR w_Operation = op_POP) THEN
+                    IF(w_Operation = op_LDR OR w_Operation = op_POP OR w_Operation = op_IRET) THEN
                         r_Current_State <= s_WRITE_BACK;
                     ELSIF(w_Operation /= op_HALT) THEN
-                        r_Current_State <= s_FETCH_INSTRUCTION;
+                        r_Current_State <= s_CHECK_INTERRUPT;
                     END IF;
                 
                 WHEN s_WRITE_BACK =>
-                    r_Current_State <= s_FETCH_INSTRUCTION;
+                    r_Current_State <= s_CHECK_INTERRUPT;
                 
+                WHEN s_CHECK_INTERRUPT =>
+                    IF((r_Soft_Rst_Edge = '1') OR (r_Irq_Edge = '1' AND w_CR_Output(c_CR_INTERRUPT_ENABLE_BIT) = '1')) THEN
+                        r_Current_State <= s_GOTO_HANDLER;
+                    ELSE
+                        r_Current_State <= s_FETCH_INSTRUCTION;
+                    END IF;
+                
+                WHEN s_GOTO_HANDLER =>
+                    r_Current_State <= s_FETCH_INSTRUCTION;
             END CASE;
         END IF;
     END PROCESS p_INSTRUCTION_CYCLE_NEXT_STATE;
 
     p_INSTRUCTION_CYCLE_GENERATE_SIGNALS:
-    PROCESS(i_Flags, r_Current_State, w_Instruction, w_Operation)
+    PROCESS(i_Flags, r_Current_State, w_Instruction, w_Operation, r_Irq_Edge, w_CR_Output, r_Soft_Rst_Edge)
         VARIABLE v_Operation_Type : t_OperationType := type_INVALID;
     BEGIN
         -- Default values (inclined to ALU operations)
@@ -118,10 +158,16 @@ BEGIN
         w_Memory_Write_Enable <= '0';
         w_Memory_Output_Enable <= '0';
         w_Load_Flags <= '0';
+        w_Save_Flags <= '0';
+        w_Retrieve_Flags <= '0';
         w_Input_Select <= '0';
         w_Address_Select <= '0';
         w_Operand_Select <= w_Instruction(11);  
         w_Load_IR <= '0';
+        w_CR_Input <= (OTHERS => '0');
+        w_Load_CR <= '0';
+        w_Soft_Rst_Edge_Ack <= '0';
+        w_Irq_Edge_Ack <= '0';
         
         v_Operation_Type := f_GetOperationType(w_Operation);
 
@@ -176,7 +222,7 @@ BEGIN
                 -- Main Memory Write Enable   
                 IF(w_Operation = op_STR OR w_Operation = op_PUSH) THEN   
                     w_Memory_Write_Enable <= '1';
-                ELSIF(w_Operation = op_LDR OR w_Operation = op_POP) THEN   
+                ELSIF(w_Operation = op_LDR OR w_Operation = op_POP OR w_Operation = op_IRET) THEN   
                     w_Memory_Output_Enable <= '1';
                 END IF;
                 
@@ -191,6 +237,8 @@ BEGIN
                     w_Select_Rm <= STD_LOGIC_VECTOR(TO_UNSIGNED(c_REGISTER_PC_INDEX, w_Select_Rm'LENGTH));
                 ELSIF(w_Operation = op_MOVU) THEN
                     w_Select_Rm <= w_Instruction(10 DOWNTO 8);
+                ELSIF(w_Operation = op_IRET) THEN
+                    w_Select_Rn <= STD_LOGIC_VECTOR(TO_UNSIGNED(c_REGISTER_PC_INDEX, w_Select_Rn'LENGTH));
                 END IF;
 
                 -- Destiny Register Select
@@ -201,8 +249,20 @@ BEGIN
                 END IF;
                       
                 -- Main Memory Address Select   
-                IF(w_Operation = op_POP) THEN   
+                IF(w_Operation = op_POP OR w_Operation = op_IRET) THEN   
                     w_Address_Select <= '1';
+                END IF;
+
+                -- Interrupt Related
+                IF(w_Operation = op_IRET) THEN
+                    w_Load_Flags <= '1';
+                    w_Retrieve_Flags <= '1';
+                ELSIF(w_Operation = op_CRIE) THEN
+                    w_CR_Input(c_CR_INTERRUPT_ENABLE_BIT) <= '1';
+                    w_Load_CR <= '1';
+                ELSIF(w_Operation = op_CRID) THEN
+                    w_CR_Input(c_CR_INTERRUPT_ENABLE_BIT) <= '0';
+                    w_Load_CR <= '1';
                 END IF;
 
             WHEN s_WRITE_BACK =>
@@ -211,9 +271,63 @@ BEGIN
                 w_Memory_Output_Enable <= '1';
                 
                 -- Main Memory Address Select   
-                IF(w_Operation = op_POP) THEN   
+                IF(w_Operation = op_POP OR w_Operation = op_IRET) THEN   
                     w_Address_Select <= '1';
                 END IF;
+                
+            WHEN s_CHECK_INTERRUPT =>
+                IF(r_Irq_Edge = '1' AND w_CR_Output(c_CR_INTERRUPT_ENABLE_BIT) = '1') THEN
+                    -- Save PC in the STACK
+                    w_Select_Rd <= STD_LOGIC_VECTOR(TO_UNSIGNED(c_REGISTER_SP_INDEX, w_Select_Rd'LENGTH));
+                    w_Select_Rm <= STD_LOGIC_VECTOR(TO_UNSIGNED(c_REGISTER_SP_INDEX, w_Select_Rm'LENGTH));
+                    w_Select_Rn <= STD_LOGIC_VECTOR(TO_UNSIGNED(c_REGISTER_PC_INDEX, w_Select_Rn'LENGTH));
+                    w_Immediate <= x"0002";
+                    w_Register_Write_Enable <= '1';
+                    w_Memory_Write_Enable <= '1';
+                    w_Operand_Select <= '1';
+                    w_Operation <= op_PUSH;
+
+                    -- Save FLAGS
+                    w_Save_Flags <= '1';
+                END IF;
+            
+            WHEN s_GOTO_HANDLER =>
+                IF(r_Soft_Rst_Edge = '1') THEN
+                    w_Immediate <= t_Reg16(c_RESET_VECTOR_ADDR);
+                    w_Soft_Rst_Edge_Ack <= '1';
+                ELSE
+                    w_Immediate <= t_Reg16(c_IRQ_VECTOR_ADDR);
+                    w_Irq_Edge_Ack <= '1';
+                END IF;
+                w_Select_Rd <= STD_LOGIC_VECTOR(TO_UNSIGNED(c_REGISTER_PC_INDEX, w_Select_Rd'LENGTH));
+                w_Register_Write_Enable <= '1';
+                w_Operand_Select <= '1';
+                w_Operation <= op_MOV;
         END CASE;
     END PROCESS p_INSTRUCTION_CYCLE_GENERATE_SIGNALS;
+
+    PROCESS(i_Rst, i_Clk)
+    BEGIN
+        IF(i_Rst = '1') THEN
+            r_Soft_Rst <= '0';
+            r_Soft_Rst_Edge <= '0';
+            r_Irq <= '0';
+            r_Irq_Edge <= '0';
+        ELSIF(RISING_EDGE(i_Clk)) THEN
+            r_Soft_Rst <= i_Soft_Rst;
+            r_Irq <= i_Irq;
+
+            IF(r_Soft_Rst = '0' AND i_Soft_Rst = '1') THEN
+                r_Soft_Rst_Edge <= '1';
+            ELSIF(w_Soft_Rst_Edge_Ack = '1') THEN
+                r_Soft_Rst_Edge <= '0';
+            END IF;
+
+            IF(r_Irq = '0' AND i_Irq = '1') THEN
+                r_Irq_Edge <= '1';
+            ELSIF(w_Irq_Edge_Ack = '1') THEN
+                r_Irq_Edge <= '0';
+            END IF;
+        END IF;
+    END PROCESS;
 END ARCHITECTURE;

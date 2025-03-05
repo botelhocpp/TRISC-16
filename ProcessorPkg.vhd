@@ -25,6 +25,8 @@ PACKAGE ProcessorPkg IS
     CONSTANT c_RAM_SIZE : INTEGER := 2**8; -- 2**14
     CONSTANT c_RAM_BASE_ADDR : t_UReg16 := x"0000";
     CONSTANT c_RAM_LIMIT_ADDR : t_UReg16 := c_RAM_BASE_ADDR + 2 * c_RAM_SIZE;
+    CONSTANT c_RESET_VECTOR_ADDR : t_UReg16 := x"0000";
+    CONSTANT c_IRQ_VECTOR_ADDR : t_UReg16 := x"0002";
 
     -- ROM Memory Sizes and Addresses (in words)
     CONSTANT c_ROM_SIZE : INTEGER := 2**7; 
@@ -35,12 +37,12 @@ PACKAGE ProcessorPkg IS
     CONSTANT c_IO_BASE_ADDR : t_UReg16 := x"F000";
 
     -- Peripherals Addresses (Led & Switch)
-    CONSTANT c_LED_SWITCH_SIZE : INTEGER := 2;
+    CONSTANT c_LED_SWITCH_SIZE : INTEGER := 4;
     CONSTANT c_LED_SWITCH_BASE_ADDR : t_UReg16 := c_IO_BASE_ADDR + x"0000";
     CONSTANT c_LED_SWITCH_LIMIT_ADDR : t_UReg16 := c_LED_SWITCH_BASE_ADDR + 2 * c_LED_SWITCH_SIZE;
 
     -- Peripherals Addresses (GPIO)
-    CONSTANT c_GPIO_SIZE : INTEGER := 4;
+    CONSTANT c_GPIO_SIZE : INTEGER := 6;
     CONSTANT c_GPIO_BASE_ADDR : t_UReg16 := c_IO_BASE_ADDR + x"0100";
     CONSTANT c_GPIO_LIMIT_ADDR : t_UReg16 := c_GPIO_BASE_ADDR + 2 * c_GPIO_SIZE;
 
@@ -77,6 +79,7 @@ PACKAGE ProcessorPkg IS
         type_MOVE,
         type_ALU,
         type_COMPARE,
+        type_CONTROL,
         type_STACK,
         type_HALT,
         type_INVALID
@@ -102,8 +105,11 @@ PACKAGE ProcessorPkg IS
         op_CMP,
         op_NOT,
         op_NEG,
+        op_CRIE,
+        op_CRID,
         op_PUSH,
         op_POP,
+        op_IRET,
         op_HALT,
         op_INVALID
     );
@@ -165,6 +171,10 @@ PACKAGE BODY ProcessorPkg IS
                         v_Operation := op_NOT;
                     WHEN "01" =>
                         v_Operation := op_NEG;
+                    WHEN "10" =>
+                        v_Operation := op_CRIE;
+                    WHEN "11" =>
+                        v_Operation := op_CRID;
                     WHEN OTHERS =>
                         v_Operation := op_INVALID;
                 END CASE;
@@ -174,6 +184,8 @@ PACKAGE BODY ProcessorPkg IS
                         v_Operation := op_PUSH;
                     WHEN "01" =>
                         v_Operation := op_POP;
+                    WHEN "10" =>
+                        v_Operation := op_IRET;
                     WHEN "11" =>
                         v_Operation := op_HALT;
                     WHEN OTHERS =>
@@ -201,7 +213,9 @@ PACKAGE BODY ProcessorPkg IS
                 v_Operation_Type := type_MOVE;
             WHEN op_CMP =>
                 v_Operation_Type := type_COMPARE;
-            WHEN op_PUSH | op_POP =>
+            WHEN op_CRIE | op_CRID =>
+                v_Operation_Type := type_CONTROL;
+            WHEN op_PUSH | op_POP | op_IRET =>
                 v_Operation_Type := type_STACK;
             WHEN op_HALT =>
                 v_Operation_Type := type_HALT;

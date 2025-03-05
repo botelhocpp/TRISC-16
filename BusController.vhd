@@ -7,6 +7,10 @@ USE WORK.ProcessorPkg.ALL;
 
 ENTITY BusController IS
 PORT (
+    i_Led_Switch_Irq            : IN STD_LOGIC;
+    i_Gpio_Irq                  : IN STD_LOGIC;
+    i_Timer_Irq                 : IN STD_LOGIC;
+    i_Uart_Irq                  : IN STD_LOGIC;
     i_Address                   : IN t_Reg16;
     i_Write_Enable              : IN STD_LOGIC;
     i_Output_Enable             : IN STD_LOGIC;
@@ -23,15 +27,18 @@ PORT (
     o_Pwm_Output_Enable         : OUT STD_LOGIC;
     o_Uart_Write_Enable         : OUT STD_LOGIC;
     o_Uart_Output_Enable        : OUT STD_LOGIC;
+    o_Interrupt_Request         : OUT STD_LOGIC;
     o_Address                   : OUT t_Reg16;
     io_Data                     : INOUT t_Reg16
 );
 END ENTITY;
 
 ARCHITECTURE RTL OF BusController IS 
-    SIGNAL w_Enable_Place_Holder : STD_LOGIC := '0';
+    SIGNAL w_Enable_Safeguard : STD_LOGIC := '0';
 BEGIN
-    io_Data <= (OTHERS => '0') WHEN (i_Output_Enable = '1' AND w_Enable_Place_Holder = '1') ELSE (OTHERS => 'Z');
+    o_Interrupt_Request <= i_Led_Switch_Irq OR i_Gpio_Irq OR i_Timer_Irq OR i_Uart_Irq;
+
+    io_Data <= (OTHERS => '0') WHEN (i_Output_Enable = '1' AND w_Enable_Safeguard = '1') ELSE (OTHERS => 'Z');
 
     p_RESOLVE_MODULE_ACCESS:
     PROCESS(i_Address, i_Write_Enable, i_Output_Enable)
@@ -41,7 +48,7 @@ BEGIN
         v_Address := t_UReg16(i_Address);
         v_Address_Bus := (OTHERS => '0');
 
-        w_Enable_Place_Holder <= '0';
+        w_Enable_Safeguard <= '0';
         o_Ram_Write_Enable <= '0';
         o_Ram_Output_Enable <= '0';
         o_Rom_Output_Enable <= '0';
@@ -91,7 +98,7 @@ BEGIN
             o_Uart_Output_Enable <= i_Output_Enable;
         
         ELSE
-            w_Enable_Place_Holder <= '1';
+            w_Enable_Safeguard <= '1';
 
         END IF;
 

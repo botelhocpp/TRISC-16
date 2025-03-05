@@ -24,8 +24,8 @@ ARCHITECTURE RTL OF PWM IS
     CONSTANT c_PWM_PRESCALER_REG_INDEX : INTEGER := 3;
     CONSTANT c_PWM_COUNT_REG_INDEX : INTEGER := 4;
     
-    CONSTANT c_PWM_CONTROL_REG_START_BIT : INTEGER := 0;
-    CONSTANT c_PWM_CONTROL_REG_DONE_BIT : INTEGER := 1;
+    CONSTANT c_PWM_CONTROL_REG_EN_BIT : INTEGER := 0;
+    CONSTANT c_PWM_CONTROL_REG_VALUE_BIT : INTEGER := 1;
     
     TYPE t_RegisterArray IS ARRAY (0 TO c_PWM_SIZE - 1) OF t_Reg16; 
     SIGNAL r_Registers : t_RegisterArray := (OTHERS => (OTHERS => '0'));
@@ -69,7 +69,7 @@ BEGIN
     );
 
     w_Counter_Input <= r_Registers(c_PWM_RELOAD_REG_INDEX);
-    w_Counter_Load <= r_Registers(c_PWM_CONTROL_REG_INDEX)(c_PWM_CONTROL_REG_START_BIT);
+    w_Counter_Load <= r_Registers(c_PWM_CONTROL_REG_INDEX)(c_PWM_CONTROL_REG_EN_BIT) AND w_Counter_Done;
     w_Counter_Prescaler <= r_Registers(c_PWM_PRESCALER_REG_INDEX);
     
     o_Pwm_Channel <= r_Pwm_Channel;
@@ -93,11 +93,7 @@ BEGIN
             END IF;
             
             r_Registers(c_PWM_COUNT_REG_INDEX) <= w_Counter_Output;
-            r_Registers(c_PWM_CONTROL_REG_INDEX)(c_PWM_CONTROL_REG_DONE_BIT) <= w_Counter_Done;
-
-            IF(r_Registers(c_PWM_CONTROL_REG_INDEX)(c_PWM_CONTROL_REG_START_BIT) = '1') THEN
-                r_Registers(c_PWM_CONTROL_REG_INDEX)(c_PWM_CONTROL_REG_START_BIT) <= '0';
-            END IF;
+            r_Registers(c_PWM_CONTROL_REG_INDEX)(c_PWM_CONTROL_REG_VALUE_BIT) <= r_Pwm_Channel;
 
             IF(r_Registers(c_PWM_COUNT_REG_INDEX) < r_Registers(c_PWM_DUTY_REG_INDEX)) THEN
                 r_Pwm_Channel <= '1';

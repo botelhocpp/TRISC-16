@@ -12,6 +12,7 @@ PORT (
     i_Output_Enable : IN STD_LOGIC;
     i_Clk           : IN STD_LOGIC;
     i_Rst           : IN STD_LOGIC;
+    o_Irq           : OUT STD_LOGIC;
     io_Data         : INOUT t_Reg16
 );
 END ENTITY;
@@ -24,6 +25,7 @@ ARCHITECTURE RTL OF Timer IS
     
     CONSTANT c_TIMER_CONTROL_REG_START_BIT : INTEGER := 0;
     CONSTANT c_TIMER_CONTROL_REG_DONE_BIT : INTEGER := 1;
+    CONSTANT c_TIMER_CONTROL_REG_IRQEN_BIT : INTEGER := 2;
     
     TYPE t_RegisterArray IS ARRAY (0 TO c_TIMER_SIZE - 1) OF t_Reg16; 
     SIGNAL r_Registers : t_RegisterArray := (OTHERS => (OTHERS => '0'));
@@ -69,6 +71,8 @@ BEGIN
     w_Counter_Load <= r_Registers(c_TIMER_CONTROL_REG_INDEX)(c_TIMER_CONTROL_REG_START_BIT);
     w_Counter_Prescaler <= r_Registers(c_TIMER_PRESCALER_REG_INDEX);
     
+    o_Irq <= r_Registers(c_TIMER_CONTROL_REG_INDEX)(c_TIMER_CONTROL_REG_DONE_BIT) AND (r_Registers(c_TIMER_CONTROL_REG_INDEX)(c_TIMER_CONTROL_REG_IRQEN_BIT));
+
     io_Data <= r_Data_Out WHEN (i_Output_Enable = '1') ELSE (OTHERS => 'Z');
     
     w_Address <= TO_INTEGER(t_UReg16(i_Address));

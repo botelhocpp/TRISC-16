@@ -16,6 +16,7 @@ PORT (
     i_Rst           : IN STD_LOGIC;
     o_Rx_Serial     : OUT STD_LOGIC;
     io_Pin_Port     : INOUT t_Reg16;
+    o_Irq           : OUT STD_LOGIC;
     io_Data         : INOUT t_Reg16
 );
 END ENTITY;
@@ -25,6 +26,8 @@ ARCHITECTURE RTL OF GPIO IS
     CONSTANT c_GPIO_DATADIR_REG_INDEX : INTEGER := 1;
     CONSTANT c_GPIO_DATAOUT_REG_INDEX : INTEGER := 2;
     CONSTANT c_GPIO_DATAIN_REG_INDEX : INTEGER := 3;
+    CONSTANT c_GPIO_CONTROL_REG_INDEX : INTEGER := 4;
+    CONSTANT c_GPIO_IRQSTATUS_REG_INDEX : INTEGER := 5;
     CONSTANT c_GPIO_PINMUX_REG_TXSEL_BIT : INTEGER := c_TX_PIN;
     CONSTANT c_GPIO_PINMUX_REG_RXSEL_BIT : INTEGER := c_RX_PIN;
     CONSTANT c_GPIO_PINMUX_REG_PWMSEL_BIT : INTEGER := c_PWM_PIN;
@@ -42,6 +45,8 @@ ARCHITECTURE RTL OF GPIO IS
     ALIAS a_DATADIR_reg : t_Reg16 IS r_Registers(c_GPIO_DATADIR_REG_INDEX);
     ALIAS a_DATAOUT_reg : t_Reg16 IS r_Registers(c_GPIO_DATAOUT_REG_INDEX); 
     ALIAS a_DATAIN_reg : t_Reg16 IS r_Registers(c_GPIO_DATAIN_REG_INDEX);
+    ALIAS a_CONTROL_reg : t_Reg16 IS r_Registers(c_GPIO_CONTROL_REG_INDEX);
+    ALIAS a_IRQSTATUS_reg : t_Reg16 IS r_Registers(c_GPIO_IRQSTATUS_REG_INDEX);
 BEGIN    
     w_Address <= TO_INTEGER(t_UReg16(i_Address));
     
@@ -52,7 +57,15 @@ BEGIN
     BEGIN
         -- Reset State
         IF(i_Rst = '1') THEN
-            r_Registers <= (OTHERS => (OTHERS => '0'));
+            r_Registers <= (
+                c_GPIO_PINMUX_REG_INDEX => (
+                    c_GPIO_PINMUX_REG_TXSEL_BIT => '1',
+                    c_GPIO_PINMUX_REG_RXSEL_BIT => '1',
+                    c_GPIO_PINMUX_REG_PWMSEL_BIT => '1',
+                    OTHERS => '0'
+                ),
+                OTHERS => (OTHERS => '0')
+            );
             r_Data_Out <= (OTHERS => 'Z');
         
         ELSIF(RISING_EDGE(i_Clk)) THEN
@@ -70,6 +83,19 @@ BEGIN
                     a_DATAIN_reg(i) <= '0';
                 END IF;
             END LOOP loop_INPUT_PIN_INTERFACE;
+
+            loop_RISING_EDGE_INTERFACE:
+            FOR i IN 0 TO io_Pin_Port'LENGTH - 1 LOOP
+                IF(
+                    io_Pin_Port(i) = '1' AND 
+                    a_DATAIN_reg(i) = '0' AND 
+                    a_DATADIR_reg(i) = '0' AND 
+                    a_IRQSTATUS_reg(i) = '0'
+                ) THEN
+                    a_IRQSTATUS_reg(i) <= '1';
+                END IF;
+            END LOOP loop_RISING_EDGE_INTERFACE;
+            
         END IF;
     END PROCESS; 
 
@@ -89,7 +115,7 @@ BEGIN
                     io_Pin_Port(i) <= a_DATAOUT_reg(i);
                 ELSIF(a_PINMUX_reg(c_GPIO_PINMUX_REG_PWMSEL_BIT) = '1' AND i = c_PWM_PIN) THEN
                     io_Pin_Port(i) <= i_Pwm_Channel;
-                ELSIF(a_DATADIR_reg(i) = '1') THEN
+                ELSIF(a_DATADIR_reg(i) = '1' AND i /= c_RX_PIN) THEN
                     io_Pin_Port(i) <= a_DATAOUT_reg(i);
                 ELSE
                     io_Pin_Port(i) <= 'Z';
@@ -105,6 +131,24 @@ BEGIN
                 o_Rx_Serial <= '1';
             END IF;
         END IF;
+    END PROCESS;
+
+    PROCESS(io_Pin_Port, a_CONTROL_REG, a_IRQSTATUS_reg)
+        VARIABLE v_Interrupt_Flag : STD_LOGIC := '0';
+    BEGIN
+        v_Interrupt_Flag := '0';
+
+        loop_ACTIVATE_INTERRUPT:
+        FOR i IN 0 TO io_Pin_Port'LENGTH - 1 LOOP
+            IF(
+                a_CONTROL_REG(i) = '1' AND 
+                a_IRQSTATUS_reg(i) = '1'
+            ) THEN
+                v_Interrupt_Flag := '1';
+            END IF;
+        END LOOP loop_ACTIVATE_INTERRUPT;
+
+        o_Irq <= v_Interrupt_Flag;
     END PROCESS;
     
 END ARCHITECTURE;

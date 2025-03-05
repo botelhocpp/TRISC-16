@@ -14,6 +14,7 @@ PORT (
     i_Rst           : IN STD_LOGIC;
     i_Switches      : IN STD_LOGIC_VECTOR(3 DOWNTO 0);
     o_Leds          : OUT STD_LOGIC_VECTOR(3 DOWNTO 0);
+    o_Irq           : OUT STD_LOGIC;
     io_Data         : INOUT t_Reg16
 );
 END ENTITY;
@@ -21,6 +22,8 @@ END ENTITY;
 ARCHITECTURE RTL OF LedSwitch IS 
     CONSTANT c_LED_SWITCH_DATAOUT_REG_INDEX : INTEGER := 0;
     CONSTANT c_LED_SWITCH_DATAIN_REG_INDEX : INTEGER := 1;
+    CONSTANT c_LED_SWITCH_CONTROL_REG_INDEX : INTEGER := 2;
+    CONSTANT c_LED_SWITCH_IRQSTATUS_REG_INDEX : INTEGER := 3;
     
     TYPE t_RegisterArray IS ARRAY (0 TO c_LED_SWITCH_SIZE - 1) OF t_Reg16; 
     SIGNAL r_Registers : t_RegisterArray := (OTHERS => (OTHERS => '0'));
@@ -50,6 +53,17 @@ BEGIN
             END IF;
             
             r_Registers(c_LED_SWITCH_DATAIN_REG_INDEX)(3 DOWNTO 0) <= i_Switches;
+
+            loop_RISING_EDGE_INTERFACE:
+            FOR i IN 0 TO i_Switches'LENGTH - 1 LOOP
+                IF(
+                    i_Switches(i) = '1' AND 
+                    r_Registers(c_LED_SWITCH_DATAIN_REG_INDEX)(i) = '0' AND 
+                    r_Registers(c_LED_SWITCH_IRQSTATUS_REG_INDEX)(i) = '0'
+                ) THEN
+                    r_Registers(c_LED_SWITCH_IRQSTATUS_REG_INDEX)(i) <= '1';
+                END IF;
+            END LOOP loop_RISING_EDGE_INTERFACE;
         END IF;
     END PROCESS p_REGISTERS_READ_WRITE_CONTROL;
 
@@ -60,4 +74,22 @@ BEGIN
             r_Leds <= r_Registers(c_LED_SWITCH_DATAOUT_REG_INDEX)(3 DOWNTO 0);
         END IF;
     END PROCESS p_DEVICES_CONTROL;
+
+    PROCESS(i_Switches, r_Registers)
+        VARIABLE v_Interrupt_Flag : STD_LOGIC := '0';
+    BEGIN
+        v_Interrupt_Flag := '0';
+
+        loop_ACTIVATE_INTERRUPT:
+        FOR i IN 0 TO i_Switches'LENGTH - 1 LOOP
+            IF(
+                r_Registers(c_LED_SWITCH_CONTROL_REG_INDEX)(i) = '1' AND 
+                r_Registers(c_LED_SWITCH_IRQSTATUS_REG_INDEX)(i) = '1'
+            ) THEN
+                v_Interrupt_Flag := '1';
+            END IF;
+        END LOOP loop_ACTIVATE_INTERRUPT;
+
+        o_Irq <= v_Interrupt_Flag;
+    END PROCESS;
 END ARCHITECTURE;

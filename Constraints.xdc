@@ -10,6 +10,7 @@ set_property -dict { PACKAGE_PIN T16   IOSTANDARD LVCMOS33 } [get_ports { i_Swit
 
 ##Buttons
 set_property -dict { PACKAGE_PIN R18   IOSTANDARD LVCMOS33 } [get_ports i_Rst]; #IO_L20N_T3_34 Sch=BTN0
+set_property -dict { PACKAGE_PIN P16   IOSTANDARD LVCMOS33 } [get_ports i_Soft_Rst]; #IO_L24N_T3_34 Sch=BTN1
 
 ##LEDs
 set_property -dict { PACKAGE_PIN M14   IOSTANDARD LVCMOS33 } [get_ports { o_Leds[0] }]; #IO_L23P_T3_35 Sch=LED0
@@ -26,6 +27,14 @@ set_property -dict { PACKAGE_PIN Y18   IOSTANDARD LVCMOS33 } [get_ports { io_Pin
 set_property -dict { PACKAGE_PIN Y19   IOSTANDARD LVCMOS33 } [get_ports { io_Pin_Port[5] }]; #IO_L17N_T2_34 Sch=JB3_N
 set_property -dict { PACKAGE_PIN W18   IOSTANDARD LVCMOS33 } [get_ports { io_Pin_Port[6] }]; #IO_L22P_T3_34 Sch=JB4_P
 set_property -dict { PACKAGE_PIN W19   IOSTANDARD LVCMOS33 } [get_ports { io_Pin_Port[7] }]; #IO_L22N_T3_34 Sch=JB4_N
+set_property PULLDOWN TRUE [get_ports io_Pin_Port[0]]
+set_property PULLDOWN TRUE [get_ports io_Pin_Port[1]]
+set_property PULLDOWN TRUE [get_ports io_Pin_Port[2]]
+set_property PULLDOWN TRUE [get_ports io_Pin_Port[3]]
+set_property PULLDOWN TRUE [get_ports io_Pin_Port[4]]
+set_property PULLDOWN TRUE [get_ports io_Pin_Port[5]]
+set_property PULLDOWN TRUE [get_ports io_Pin_Port[6]]
+set_property PULLDOWN TRUE [get_ports io_Pin_Port[7]]
 
 ##Pmod Header JC
 set_property -dict { PACKAGE_PIN V15   IOSTANDARD LVCMOS33 } [get_ports { io_Pin_Port[8] }]; #IO_L10P_T1_34 Sch=JC1_P
@@ -36,3 +45,11 @@ set_property -dict { PACKAGE_PIN W14   IOSTANDARD LVCMOS33 } [get_ports { io_Pin
 set_property -dict { PACKAGE_PIN Y14   IOSTANDARD LVCMOS33 } [get_ports { io_Pin_Port[13] }]; #IO_L8N_T1_34 Sch=JC3_N
 set_property -dict { PACKAGE_PIN T12   IOSTANDARD LVCMOS33 } [get_ports { io_Pin_Port[14] }]; #IO_L2P_T0_34 Sch=JC4_P
 set_property -dict { PACKAGE_PIN U12   IOSTANDARD LVCMOS33 } [get_ports { io_Pin_Port[15] }]; #IO_L2N_T0_34 Sch=JC4_N
+set_property PULLDOWN TRUE [get_ports io_Pin_Port[8]]
+set_property PULLDOWN TRUE [get_ports io_Pin_Port[9]]
+set_property PULLDOWN TRUE [get_ports io_Pin_Port[10]]
+set_property PULLDOWN TRUE [get_ports io_Pin_Port[11]]
+set_property PULLDOWN TRUE [get_ports io_Pin_Port[12]]
+set_property PULLDOWN TRUE [get_ports io_Pin_Port[13]]
+set_property PULLDOWN TRUE [get_ports io_Pin_Port[14]]
+set_property PULLDOWN TRUE [get_ports io_Pin_Port[15]]
