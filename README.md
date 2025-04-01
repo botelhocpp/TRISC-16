@@ -24,4 +24,3 @@ For more informations, see the latest revision [datasheet](https://github.com/bo
 - [X] Timer
 - [X] UART
 - [X] PWM
-- [X] HDMI
